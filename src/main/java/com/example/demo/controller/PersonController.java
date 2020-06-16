@@ -1,92 +1,71 @@
 package com.example.demo.controller;
 
-import java.util.List;
-import java.util.Optional;
-
-import javax.validation.Valid;
-
+import com.example.demo.model.Person;
+import com.example.demo.service.PersonService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import com.example.demo.model.Person;
-import com.example.demo.service.PersonService;
+import java.util.List;
+import java.util.Optional;
 
-@Controller
+@RestController
 public class PersonController {
-	public static Logger logger = LoggerFactory.getLogger(PersonController.class);
-	private Long id;
-	@Autowired
-	PersonService personService;
-	Person per = new Person();
-	@RequestMapping(value = "/", method = RequestMethod.GET)
-	public String listAllContact(Model model) {
-		List<Person> listContact = personService.findAll();
-		model.addAttribute("person", listContact);
-//		new ResponseEntity<List<Person>>(listContact, HttpStatus.OK)
-		return "form";
-	}
-	
-	@RequestMapping(value = "/create", method = RequestMethod.GET)
-	public String customerForm(Model model) {
-		model.addAttribute("person", new Person());
-		return "create";
-	}
-	
-	@RequestMapping(value = "/create", method = RequestMethod.POST)
-	public String customerSubmit(@ModelAttribute Person person, Model model) {
-		model.addAttribute("person", person);
-		Person p = new Person();
-		p.setFisrtName(person.getFisrtName());
-		p.setLastName(p.getLastName());
-		p.setAge(p.getAge());
-		personService.save(p);
-		return "redirect:/";
-	}
+    public static Logger logger = LoggerFactory.getLogger(PersonController.class);
+    private Long id;
+    @Autowired
+    PersonService personService;
+    Person per = new Person();
 
-	@RequestMapping(value = "/edit/{id}", method = RequestMethod.GET)
-	public String findContact(@PathVariable("id") long id, Model model) {
-		Person p = personService.getOne(id);
-		if (p == null) {
-			ResponseEntity.notFound().build();
-		}
-		per.setId(id);
-		model.addAttribute("person", p);
-		return "edit";
-	}
+    @RequestMapping(value = "/",produces = "application/json", method = RequestMethod.GET)
+    public ResponseEntity<List<Person>> listAllUser() {
+        List<Person> listUser = personService.findAll();
+        if (listUser.isEmpty()) {
+            return new ResponseEntity(HttpStatus.NO_CONTENT);
+        }
+        return new ResponseEntity<List<Person>>(listUser, HttpStatus.OK);
+    }
 
-	@RequestMapping(value = "/person/", method = RequestMethod.POST)
-	public Person saveContact(@Valid @RequestBody Person person) {
-		return personService.save(person);
-	}
+    @RequestMapping(value = "/person/{id}",produces = "application/json", method = RequestMethod.GET)
+    public ResponseEntity<Person> getUser(@PathVariable("id") long id) {
+        Optional<Person> p = personService.findById(id);
+        return new ResponseEntity<Person>(p.get(), HttpStatus.OK);
+    }
 
-	@RequestMapping(value = "/update", method = RequestMethod.POST)
-	public String update( @RequestParam String fisrtName,
-			@RequestParam String lastName, @RequestParam int age, @ModelAttribute Person p, Model model) {
-		model.addAttribute("person", p);
-		Optional<Person> person = personService.findById(per.getId());
-		person.get().setLastName(lastName);
-		person.get().setFisrtName(fisrtName);
-		person.get().setAge(age);
-		personService.save(person.get());
-		return "redirect:/";
-	}
 
-	@RequestMapping(value = "/delete/{id}")
-	public String deleteContact(@PathVariable(value = "id") Long id) {
-		Optional<Person> p = personService.findById(id);
-		personService.delete(p.get());
-		return "redirect:/";
-	}
+    @RequestMapping(value = "/create", produces = "application/json", method = RequestMethod.POST)
+    public ResponseEntity<Person> createUser(@RequestBody Person person, UriComponentsBuilder ucBuilder) {
+        System.out.println(person.getFisrtName());
+        personService.save(person);
+        return new ResponseEntity<Person>(person, HttpStatus.CREATED);
+    }
+
+
+    @RequestMapping(value = "/person/{id}", method = RequestMethod.PUT)
+    public ResponseEntity<Person> updatePerson(@PathVariable("id") long id, @RequestBody Person person) {
+        Optional<Person> currentPerson = personService.findById(id);
+        currentPerson.get().setFisrtName(person.getFisrtName());
+        currentPerson.get().setLastName(person.getLastName());
+        currentPerson.get().setAge(person.getAge());
+        personService.save(currentPerson.get());
+        return new ResponseEntity<Person>(currentPerson.get(), HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "/person", method = RequestMethod.DELETE)
+    public ResponseEntity<Person> deleteAllPerson() {
+        personService.deleteAll();
+        return new ResponseEntity<Person>(HttpStatus.NO_CONTENT);
+    }
+
+    @RequestMapping(value = "/person/{id}", method = RequestMethod.DELETE)
+    public ResponseEntity<Person> deletePerson(@PathVariable("id") long id) {
+        Optional<Person> p = personService.findById(id);
+        personService.deleteById(id);
+        return new ResponseEntity<Person>(HttpStatus.NO_CONTENT);
+    }
+
 }
